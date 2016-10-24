@@ -316,3 +316,85 @@ train("classif.rpart",task = classiftask,weights = wt)
 #one can also specify the weights in task, but those in train take precedence over the ones in tasks
 
 
+# Predicting Outcomes for New Data ----------------------------------------
+
+#prediction method is the same, however the new data is passed as
+#1. either pass the Task via Task argument
+#2. or pass the data frame via new data argument
+
+#use the boston housing and fit a GBM model
+
+n=getTaskSize(regr.task)
+n
+train.set=seq(1,n,by=2)
+test.set=seq(2,n,by=2)
+
+lrn=makeLearner("regr.gbm",n.trees=100)
+regmod=train(lrn,regr.task,subset = train.set)
+task.pred=predict(regmod,task=regr.task,subset = test.set)
+task.pred
+names(task.pred)
+task.pred$task.desc
+task.pred$data
+
+#for unsupervised machine learning problems
+
+#we cluster the IRIS dataset w/o the target variable
+
+n=nrow(iris)
+iris.train=iris[seq(1,n,by=2),-5]
+iris.test=iris[seq(2,n,by=2),-5]
+task=makeClusterTask(data=iris.train)
+mod=train("cluster.kmeans",task)
+newdata.pred=predict(mod,newdata = iris.test)
+newdata.pred
+
+#assessing the prediction
+
+head(as.data.frame(task.pred))
+
+#direct way to access the true and predicted values of the target variables is
+head(getPredictionTruth(task.pred))
+
+#to get the actual response
+
+head(getPredictionResponse(task.pred))
+
+#to get probabilities, use the function- getpredictionprobabilities
+
+#using fuzzy cmeans clustering
+
+lrn=makeLearner("cluster.cmeans",predict.type = "prob")
+mod=train(lrn,clustertask) #clustertask created for the mtcars dataset
+pred=predict(mod,task=clustertask)
+head(getPredictionProbabilities(pred))
+
+#using prediction probabilities for classification tasks
+
+#linear discriminent analysis on the IRIS dataset
+
+mod=train("classif.lda",task = iris.task)
+pred=predict(mod,task=iris.task)
+pred
+
+#to get predicted posterior probabilities
+
+lrn=makeLearner("classif.rpart",predict.type = "prob")
+mod=train(lrn,iris.task)
+pred=predict(mod,newdata = iris)
+head(as.data.frame(pred))
+pred
+pred$data
+
+conf.matrix=getConfMatrix(pred,relative=FALSE)
+
+head(getPredictionProbabilities(pred))
+
+#a confusion matrix can be obtained by the function calculateconfusionmatrix
+
+library(caret)
+confusionMatrix(pred$data$response,pred$data$Species)
+
+#generating confusion matrix in mlr
+
+
