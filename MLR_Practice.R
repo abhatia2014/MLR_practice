@@ -214,7 +214,7 @@ lrns=listLearners()
 #list classifiers that can output probabilities
 
 lrns2=listLearners("classif",properties = "prob")
-
+lrns2
 #list learners that can be applied to iris (ie. multiclass) and output probabilities
 
 lrns3=listLearners(iris.task,properties = 'prob')
@@ -265,6 +265,7 @@ clus.lrn=makeLearner("cluster.kmeans",centers=4)
 #train the learnere
 
 clus.trn=train(clus.lrn,task.cluster)
+getLearnerModel(clus.trn)
 clus.trn
 names(clus.trn)
 clus.trn$learner
@@ -392,9 +393,50 @@ head(getPredictionProbabilities(pred))
 
 #a confusion matrix can be obtained by the function calculateconfusionmatrix
 
-library(caret)
+
 confusionMatrix(pred$data$response,pred$data$Species)
 
 #generating confusion matrix in mlr
 
+#adjusting the threshold
+
+# threshold to decide if the predicted class is positive
+sonar.task
+lrn=makeLearner('classif.rpart',predict.type = "prob")
+library(mlr)
+mod=train(lrn,task = sonar.task)
+
+#get the label of the positive class
+getTaskDescription(sonar.task)$positive
+
+pred1=predict(mod,sonar.task)
+pred1$threshold
+
+#set the threshold value for the positive class
+
+pred2=setThreshold(pred1,0.9)
+pred2$threshold
+pred2
+
+head(getPredictionProbabilities(pred1))
+head(getPredictionProbabilities(pred1,cl=c("M","R")))
+
+#using it for multiclass function
+
+lrn=makeLearner("classif.rpart",predict.type = "prob")
+mod=train(lrn,iris.task)
+pred=predict(mod,newdata = iris)
+pred$threshold
+table(as.data.frame(pred)$response)
+pred=setThreshold(pred,c(setosa=0.01,versicolor=50,virginica=1))
+pred$threshold
+table(as.data.frame(pred)$response)
+
+
+# Visualizing the prediction ----------------------------------------------
+
+#the function plotlearnerprediction helps visualizing the predictions
+
+#for classification-we get a scatter plot of 2 features
+#symbols with white border indicate misclassified observations
 
