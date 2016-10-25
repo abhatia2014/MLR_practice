@@ -4,7 +4,7 @@
 # a simple example of stratified crossvalidation of LDA with R
 
 #install.packages
-install.packages("mlr")
+
 library(mlr)
 data(iris)
 head(iris)
@@ -462,4 +462,163 @@ plotLearnerPrediction("regr.lm",features=c("lstat","rm"),task=bh.task)
 
 # Evaluating Learner Performance ------------------------------------------
 
+#the function to call is performance on the prediction results
 
+#typical performance measure for classification is mmce (misclassification error),
+# accuracy (acc), or ROC analysis
+
+#for regression , the mse (mean squared error) or mae (mean of absolute error)
+# is a good peformance measure
+
+#for clustering, the Dunn index (Dunn) is a good peformance indicator
+
+# a list of all performance measures for classification of multiple classes
+
+listMeasures("classif",properties = "classif.multi")
+
+#performance measures suitable for iris classification tasks
+
+listMeasures(iris.task)
+
+#this function gives the default measure for the learning problem
+
+getDefaultMeasure(iris.task)
+getDefaultMeasure(bh.task)
+
+#we'll fit a gradient boosing machine method on the boston housing data and calculate the default mse
+bh.task
+n=getTaskSize(bh.task)
+lrn=makeLearner("regr.gbm",n.trees=1000)
+mod=train(lrn,task = bh.task,subset = seq(1,n,by=2))
+pred=predict(mod,task = bh.task,subset = seq(2,n,by=2))
+
+performance(pred)
+
+#if we want to know the median of squared error
+
+performance(pred,measures = medse)
+
+performance(pred, measures=list(mse, medse,mae))
+
+#for some performance measures like time to train, we have to pass the task or fitted model
+
+performance(pred,measures = list(timetrain,timeboth,timepredict),model = mod)
+
+#for many performance measures in clustering, the task is required
+
+lrn=makeLearner("cluster.kmeans",centers=3)
+mod=train(lrn, mtcars.task)
+pred=predict(mod,task=mtcars.task)
+
+performance(pred, measures=dunn,task=mtcars.task)
+
+#Calculation of AUC for binary classification
+
+lrn=makeLearner("classif.rpart",predict.type = "prob")
+mod=train(lrn,task = sonar.task)
+pred=predict(mod,task=sonar.task)
+
+performance(pred,measures = list(mmce,auc))
+
+#Access a performance measure
+
+str(mmce)
+str(auc)
+
+#Binary classification
+
+#we consider the sonar dataset
+?sonar.task
+data("sonar.task")
+sonar.task
+lrn=makeLearner("classif.lda",predict.type = "prob")
+n=getTaskSize(sonar.task)
+mod=train(lrn,task = sonar.task,subset=seq(1,n,by=2))
+pred=predict(mod,task=sonar.task,subset=seq(2,n,by=2))
+
+#performance for the default threshold of 0.5
+
+performance(pred,measures = list(fpr,fnr,mmce))
+
+#lets plot the false positive and negative rate against the threshold
+
+d=generateThreshVsPerfData(pred,measures = list(fpr,fnr,mmce))
+plotThreshVsPerf(d)
+
+#lets plot using ggvis package
+
+plotThreshVsPerfGGVIS(d)
+
+#calculating performance using ROC measures
+#function calculateROCMeasures
+
+calculateROCMeasures(pred)
+calculateConfusionMatrix(pred)
+
+
+# Resampling --------------------------------------------------------------
+
+#various resampling strategies- cross validation and bootstrap
+
+#function to chose the strategy- makeResampleDesc
+
+#different strategies
+# Cross validation ("cv")
+# Leave One out cross validation ("LOO")
+# repeated cross validation ("RepCV")
+# out of bag bootstrap and other variants ("Bootstrap")
+# subsampling - called Monte Carlo Validation ("Subsample")
+# Holdout ("Holdout")
+
+#resample function evaluates the performance of a learner
+
+#resampling strategy example (3 fold cross validation)
+
+rdesc=makeResampleDesc("CV",iters=3)
+rdesc
+r=resample("surv.coxph",lung.task,rdesc)
+
+r
+names(r)
+#gives the aggregated performance
+r$aggr
+#gives the performance of the test set
+r$measures.test
+r$measures.train
+
+r$pred
+
+#cluster iris feature data
+
+task=makeClusterTask(data=iris[,-5])
+
+#subsampling with 5 iterations and default split 2/3
+
+rdesc=makeResampleDesc("Subsample",iters=5)
+
+#another example with 5 iterations and 4/5 of the training data split
+
+rdesc=makeResampleDesc("Subsample",iters=5, split=4/5)
+
+#calculate the performance measures
+library(clusterSim)
+r=resample("cluster.kmeans",task,rdesc,measures=list(dunn,db,timetrain))
+
+#Stratified Sampling
+
+#stratified sampling ensures that all samples have the same proportion of classes 
+#as the original data- particularly for imbalanced data
+
+#put stratify=TRUE in the makeResampleDesc
+
+# 3 fold cv
+
+rdesc=makeResampleDesc("CV",iters=10,stratify = TRUE)
+
+rdesc
+r=resample("classif.lda",iris.task,rdesc)
+r$pred
+
+#stratification for survival tasks
+
+rdesc=makeResampleDesc("CV",iters=3,stratify.cols = "chas")
