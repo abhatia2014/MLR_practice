@@ -437,6 +437,29 @@ table(as.data.frame(pred)$response)
 
 #the function plotlearnerprediction helps visualizing the predictions
 
-#for classification-we get a scatter plot of 2 features
+#for classification-we get a scatter plot of 2 features (by default first two in the dataset)
 #symbols with white border indicate misclassified observations
+
+lrn=makeLearner("classif.rpart",id="CART")
+plotLearnerPrediction(lrn,task = iris.task)
+
+#plotting for clustering
+
+#here color represents the predicted cluster
+library(clusterSim)
+lrn=makeLearner("cluster.kmeans")
+plotLearnerPrediction(lrn,task=mtcars.task,features = c("disp","drat"),cv=0)
+
+#for regression - there are two types of plots
+#1. 1 D plots showing target value in relation to single feature
+
+plotLearnerPrediction("regr.lm",features = "lstat",task=bh.task)
+
+#2 D plots
+
+plotLearnerPrediction("regr.lm",features=c("lstat","rm"),task=bh.task)
+
+
+# Evaluating Learner Performance ------------------------------------------
+
 
