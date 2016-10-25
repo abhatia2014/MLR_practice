@@ -621,4 +621,96 @@ r$pred
 
 #stratification for survival tasks
 
-rdesc=makeResampleDesc("CV",iters=3,stratify.cols = "chas")
+rdesc=makeResampleDesc("CV",iters=10,stratify.cols = "chas")
+
+r=resample("regr.rpart",bh.task,rdesc)
+
+#accessing individual learner models
+
+#for returning the models that are build by resample
+
+rdesc=makeResampleDesc("CV",iters=3)
+
+r=resample("classif.lda",iris.task,rdesc,models = TRUE)
+
+r$models
+
+#getting the variable importance in a regression tree using the extract argument
+
+rdesc=makeResampleDesc('CV',iters=3)
+r=resample('regr.rpart',bh.task,rdesc,extract = function(x) x$learner.model$variable.importance)
+
+r$extract
+
+str(rdesc)
+
+#if you want to compare learner models, better to use makeResampleInstance
+
+#a resample instance can be created from a function makeResampleInstance given a resampledesc
+#and the size of data or the task
+#makeresampleinstance performs random drawing of indices to separate the data into training and test set
+
+rin=makeResampleInstance(rdesc,task=iris.task)
+rin
+rin$train.inds
+rin$size
+rin$test.inds
+rin
+rin=makeResampleInstance(rdesc,size=nrow(iris))
+rin
+str(rin)
+rin$train.inds[[3]]
+#as the indices are defined, carrying out the same experiment for different learners using the same
+#indices can be a good comparison
+
+#calculate the performance of two learners based on the same resampling
+rdesc=makeResampleDesc("CV",iters=3)
+rin=makeResampleInstance(rdesc,task=iris.task)
+r.lda=resample("classif.lda",iris.task,rin,show.info = TRUE)
+r.rpart=resample("classif.rpart",iris.task,rin,show.info = TRUE)
+r.lda$aggr
+r.rpart$aggr
+
+#aggregating performance values
+
+mmce$properties
+mmce$aggr
+rmse$aggr
+
+#using different performance measures and aggregation
+
+m1=mmce
+m2=setAggregation(tpr,test.median)
+
+rdesc=makeResampleDesc("CV",iters=10)
+r=resample("classif.rpart",sonar.task,rdesc,measures = list(m1,m2))
+
+#Example - calculating the training error
+
+#we have to set predict="both" to get the predictions on both training and test set
+
+mmce.train.mean=setAggregation(mmce,train.mean)
+rdesc=makeResampleDesc("CV",iters=10,predict = "both")
+r=resample("classif.rpart",iris.task,rdesc,measures=list(mmce.train.mean,mmce))
+r$measures.train
+r$measures.test
+r$aggr
+
+
+#example of Bootstrap -draw with replacement
+rdesc=makeResampleDesc("Bootstrap",predict = "both",iters=10)
+listMeasures(iris.task)
+r=resample('classif.rpart',iris.task,rdesc,measures = list(mmce,acc))
+r$aggr
+r$measures.test
+
+#convenience functions
+#some frequently used resampling strategies that can be used w/o much inconvenience
+
+holdout("regr.lm",bh.task,measures = list(mse,mae))
+crossval('classif.lda',iris.task,iters=3,measures = list(mmce,ber))
+
+
+# Tuning Hyperparameters --------------------------------------------------
+
+
