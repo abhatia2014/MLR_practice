@@ -713,4 +713,156 @@ crossval('classif.lda',iris.task,iters=3,measures = list(mmce,ber))
 
 # Tuning Hyperparameters --------------------------------------------------
 
+#in order to tune a machine learning algorithm, you have to specify
+#1. the search space
+#2. the optimization algorithm (tuning method)
+#3. the evaluation method (resampling method and performance measure)
 
+#an example of search space
+
+#example create a search space for searching the values of c parameter of SVM between 0.01 to 0.1
+
+getParamSet("classif.ksvm")
+?ksvm
+ps=makeParamSet(
+  makeNumericParam("C",lower = 0.01, upper= 0.1)
+)
+
+#an example of the optimization algorithm could be performing random search on in the space
+#random search with 100 iterations
+
+ctrl=makeTuneControlRandom(maxit = 100L)
+
+#an example of evaluation method could be a 3 fold CV using accuracy as the performance measure
+
+rdesc=makeResampleDesc("CV",iters=3)
+measure=acc
+
+#doing in more details
+
+#in this example well use the iris classification using SVM function
+#here we will tune the c (cost) parameter and sigma of ksvm function
+
+#specifying the search space (more details)
+
+#first we give discrete values to the parameters
+
+discrete_ps=makeParamSet(
+  makeDiscreteParam("C",values = c(0.5,1.0,1.5,2.0)),
+  makeDiscreteParam("sigma",values=c(0.5,1.0,1.5,2.0))
+)
+
+discrete_ps
+
+#we could also define a continous search space using makeNumericParam
+#in the search space 10^-10 to 10^10
+
+# use trafo argument for transformation
+
+num_ps=makeParamSet(
+  makeNumericParam("C",lower=-10, upper=10, trafo = function(x) 10^x),
+  makeNumericParam("sigma",lower=-10, upper=10, trafo = function(x) 10^x)
+)
+
+num_ps
+
+#specifying the optimiation algorithm (detailed)
+
+#a grid search is one of the standard- though slower
+
+#in the case of discrete search , the grid search will be a cross product
+
+ctrl=makeTuneControlGrid()
+
+#in case of num_ps (numeric search parameter) , grid search will create a grid using equally sized steps (10)
+
+#the default 10 steps can be changed specifying 
+ctrl = makeTuneControlGrid(resolution = 15)
+
+#if the grid search is too slow, we can use random search, it will randomly choose from the specified values
+
+#the maxit arguement controls the number of iterations
+
+ctrl=makeTuneControlRandom(maxit = 10L)
+
+#in the case of num_ps, random search will randomly choose points in the specified bounds
+
+ctrl=makeTuneControlRandom(maxit = 200)
+
+#performing the tuning
+
+#first define a sampling strategy and peformance measure
+
+rdesc=makeResampleDesc("CV",iters=3)
+
+#finally we combine all the previous pieces
+ctrl=makeTuneControlGrid()
+res=tuneParams("classif.ksvm",task = iris.task,resampling = rdesc,
+               par.set = discrete_ps,control = ctrl,measure=acc)
+res
+
+#tune param performs cross validation for every element of the cross product and selects the 
+#hyperparameter with the best performance
+
+#let's again tune parameters using the numeric parameter set
+
+#search space
+num_ps=makeParamSet(
+  makeNumericParam("C",lower=-10,upper=10, trafo = function(x) 10^x),
+  makeNumericParam("sigma",lower=-10,upper =10, trafo = function(x) 10^x)
+)
+
+#optimization algorithm
+
+ctrl=makeTuneControlRandom(maxit = 100)
+
+#tune parameters
+
+res=tuneParams("classif.ksvm",task=iris.task,resampling = rdesc, par.set = num_ps,
+              control = ctrl,measures = list(acc,setAggregation(acc,test.sd)))
+res
+
+#accessing the tuning results
+
+res$x
+
+res$y
+
+#we can now create a learner with optimal hyperparameter settings as follows
+
+lrn=setHyperPars(makeLearner("classif.ksvm"),par.vals = res$x)
+
+lrn
+#now we train the model using the learner on the complete iris dataset
+
+m=train(lrn,iris.task)
+pred=predict(m,task=iris.task)
+calculateConfusionMatrix(pred)
+
+#investigating hyperparameter tuning effects
+
+#we can investigate all points evaluated during the search
+
+generateHyperParsEffectData(res)
+
+#in order to get the actual parameter on the transformed scale, use trafo argument
+
+generateHyperParsEffectData(res,trafo = TRUE)
+
+#here we generate performance on both the test and train data using predict="both" argument
+
+rdesc2=makeResampleDesc("Holdout",predict="both")
+
+#and tune the parameters
+
+res2=tuneParams("classif.ksvm",task=iris.task,resampling = rdesc2,control = ctrl,
+                par.set = num_ps,measures = list(acc,setAggregation(acc,train.mean)))
+res2
+res2$y
+
+#we'll now visualize the points using the plothyperparseffect
+res=tuneParams("classif.ksvm",task=iris.task,resampling = rdesc, par.set = num_ps,
+               control = ctrl,measures = list(acc,mmce))
+res
+data=generateHyperParsEffectData(res)
+plotHyperParsEffect(data,x="iteration",y="acc.test.mean",plot.type = "line")
