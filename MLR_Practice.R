@@ -913,3 +913,123 @@ irispred=predict(iristrain,task=iris.task)
 
 calculateConfusionMatrix(irispred) #using randomForest model
 calculateConfusionMatrix(pred) #using ksvm model
+
+
+# Benchmarking Experiments ------------------------------------------------
+
+# in a benchmarking experiment, different learning methods are applied to one or several
+#dataset with the aim to compare and rank the algorithms with respect to the performance measures
+
+#done by calling a function 'benchmark' on a list of learners and a list of tasks
+
+#benchmark executes a resample for each learner and task
+
+#example on two learners - LDA (Linear Discriminant Analysis) and Classification Tree (rpart)
+#applied to sonar.task
+
+#resampling strategy - holdout
+
+lrns=list(makeLearner("classif.lda",predict.type = "prob"),makeLearner("classif.rpart",predict.type = "prob"),makeLearner("classif.randomForest",predict.type = "prob"),makeLearner("classif.ksvm",predict.type = "prob"))
+
+#chosing the resampling strategy
+
+rdesc=makeResampleDesc("Holdout")
+
+#conduct the benchmark experiment
+
+listMeasures(sonar.task)
+
+bmr=benchmark(lrns,sonar.task,rdesc,measures = list(mmce,acc,tpr,fpr,auc,kappa))
+
+bmr
+
+bmr$measures
+
+#accessing benchmark results
+
+#getBMRPerformances returns individual performances in the resampling runs
+#whitle getBMRAggrPerformances gets aggregated values
+
+getBMRPerformances(bmr)
+
+getBMRAggrPerformances(bmr)
+
+#to convert it into a dataframe, put as.df=TRUE
+
+t=getBMRPerformances(bmr,as.df = TRUE)
+
+#predicting results
+
+#assess predictions using getBRMPredictions
+
+getBMRPredictions(bmr)
+
+#to access results of a certain learner by their ID
+
+head(getBMRPredictions(bmr,learner.ids = "classif.randomForest",as.df = TRUE))
+
+#get the IDs of all learners or tasks
+
+getBMRTaskIds(bmr)
+getBMRLearnerIds(bmr)
+
+#also measures IDs
+getBMRMeasureIds(bmr)
+
+#the fitted models can be retrieved using the syntax getBMRModels
+
+getBMRModels(bmr)
+
+#extracting the learners
+
+getBMRLearners(bmr)
+
+#extract measures
+
+getBMRMeasures(bmr)
+
+#Merging benchmark results
+
+#merging two benchmark results using mergeBenchmarkResultLearner
+
+#first benchmark result as a dataframe
+
+bmr
+
+#define second benchmark
+listLearners(sonar.task)
+lrns2=list(makeLearner("classif.gbm",predict.type = "prob"),makeLearner("classif.avNNet",predict.type = "prob"),
+           makeLearner("classif.C50",predict.type = "prob"))
+
+bmr2=benchmark(lrns2,sonar.task,rdesc,measures = list(mmce,acc,tpr,fpr,auc,kappa))
+
+bmr2
+
+#now merge the results of bmr2 with bmr
+
+bmrfinal=mergeBenchmarkResultLearner(bmr,bmr2)
+getBMRPredictions(bmrfinal,as.df = TRUE)
+getBMRPerformances(bmrfinal,as.df = TRUE)
+
+#in the case of BMR and BMR2 , different resamples were passed to the benchmarks
+#better to work with resampleinstances from the begining
+
+#alternatively, one can extract the resampleInstances from the first benchmark experiment
+# and pass to all future benchmark calls
+
+rin=getBMRPredictions(bmr)[[1]][[1]]$instance
+
+rin
+bmr3=benchmark(lrns2,sonar.task,rin,measures = list(mmce,acc,tpr,fpr,auc,kappa))
+
+#now merge the bmr and bmr3
+
+bmr_sample_final=mergeBenchmarkResultLearner(bmr,bmr3)
+bmr_sample_final
+
+#Benchmark analysis and visualization
+
+#analyzing the results of the benchmarking experiment by 
+#visualization, algorithm ranking, and hypothesis testing
+
+
