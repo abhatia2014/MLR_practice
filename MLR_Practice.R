@@ -866,3 +866,50 @@ res=tuneParams("classif.ksvm",task=iris.task,resampling = rdesc, par.set = num_p
 res
 data=generateHyperParsEffectData(res)
 plotHyperParsEffect(data,x="iteration",y="acc.test.mean",plot.type = "line")
+
+#do the same with some other classifier, let's say randomForest
+
+getParamSet("classif.randomForest")
+?randomForest
+#we'll take 3 parameters ntree, mtry and sampsize
+
+#we use  a search based on discrete values
+
+search1=makeParamSet(
+  makeDiscreteParam("ntree",values = c(100,300,500,700,1000,3000)),
+  makeDiscreteParam('mtry',values = c(1,2,3,4,5)),
+  makeDiscreteParam("sampsize",values = c(10,20,30))
+)
+
+#define the optimization algorithm
+
+ctrl1=makeTuneControlGrid(resolution = 20)
+
+#define the sampling and performance measures
+
+resampleIris=makeResampleDesc("CV",iters=10)
+measures=list(acc,mmce)
+
+#tune the parameters
+
+mytune=tuneParams("classif.randomForest",task = iris.task,resampling = resampleIris,
+                  par.set = search1,measures = measures,control = ctrl1)
+mytune
+
+#so the optimized parameter set is ntree=700, mtry=2, sampsize=10
+
+#we use these parameters to create the learner model using sethyperpars
+
+
+irislearner=setHyperPars(makeLearner("classif.randomForest"),par.vals = mytune$x)
+
+#train the model
+
+iristrain=train(irislearner,task = iris.task)
+
+#perform the prediction
+
+irispred=predict(iristrain,task=iris.task)
+
+calculateConfusionMatrix(irispred) #using randomForest model
+calculateConfusionMatrix(pred) #using ksvm model
