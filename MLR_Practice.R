@@ -1159,3 +1159,36 @@ plotCritDifferences(g)
 perf=getBMRPerformances(bmr,as.df = TRUE)
 
 ggplot(perf,aes(mmce,color=learner.id))+geom_density()+facet_wrap(~task.id)
+
+
+# Parallelization ---------------------------------------------------------
+
+#parallel map supports mlr
+#good to call parallelstop at the end of the script
+
+#loading parallelmap library
+
+library(parallelMap)
+
+#starting parrellization in mode=socket with cpus=1
+
+parallelStartSocket(2)
+
+rdesc=makeResampleDesc("CV",iters=10)
+
+r=resample("classif.lda",iris.task,rdesc)
+
+parallelStop()
+#this stops the parallelization
+
+#the levels that are supported for parallelization
+
+parallelGetRegisteredLevels()
+
+#one can only do parallel computing on a level and not on the whole by 
+#passing 'mlr.resample' to the parallelStart function
+
+
+# Visualization -----------------------------------------------------------
+
+
