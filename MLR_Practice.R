@@ -1032,4 +1032,130 @@ bmr_sample_final
 #analyzing the results of the benchmarking experiment by 
 #visualization, algorithm ranking, and hypothesis testing
 
+#we conduct a larger benchmark experiment with three learning experiment applied to five classification tasks
 
+#example comparing lda, rpart, randomForest and ksvm
+
+#we'll choose 5 tasks 
+#and use 10 fold CV as the resampling strategy
+
+#use mmce are the primary performance measure, also calculate ber (balanced error rate) and training time (timetrain)
+
+lrns=list(
+  makeLearner("classif.lda",id='lda'),
+  makeLearner("classif.rpart",id='rpart'),
+  makeLearner("classif.randomForest",id="randomForest"),
+  makeLearner("classif.ksvm",id="svm"),
+  makeLearner("classif.gbm",id="gbm")
+)
+
+#get additional tasks from the package mlbench
+
+ring.task=convertMLBenchObjToTask("mlbench.ringnorm",n=600)
+wave.task=convertMLBenchObjToTask("mlbench.waveform",n=600)
+
+#define all tasks
+
+tasks=list(iris.task,sonar.task,pid.task,ring.task,wave.task)
+
+#define the resampling strategy
+
+rdesc=makeResampleDesc("CV",iters=10)
+
+#define measures
+
+meas=list(mmce,ber,timetrain)
+
+#run the benchmark experiment
+
+bmr=benchmark(lrns,tasks,rdesc,meas)
+bmr
+
+#the individual performance on the 10 folds for every task, learner and measure can be 
+#retrieved as below
+
+perf=getBMRPerformances(bmr,as.df = TRUE)
+perf
+
+aggrperf=getBMRAggrPerformances(bmr,as.df = TRUE)
+aggrperf
+
+#integrated Plots
+
+#visualizing performance
+#plotBMRBoxPlot create box or violin plots
+
+plotBMRBoxplots(bmr,measure = mmce)
+
+#or as violin plots
+
+plotBMRBoxplots(bmr,measure = ber,style = "violin")+
+  aes(color=learner.id)+theme(strip.text.x=element_text(size=8))
+
+mmce$name #gives the name of the measure ie. mean misclassification error
+
+#changing the panel header names and learner names (xaxis)
+
+plt=plotBMRBoxplots(bmr,measure=mmce,style="violin")
+levels(plt$data$task.id)=c('Iris',"Ringnorm","Waveform","Diabetes","Sonar")
+levels(plt$data$learner.id)=c("lda","rpart","rf","svm","gbm")
+plt+aes(color=learner.id)
+
+#visualizing aggreageted performance using plotBMRSummary
+
+plotBMRSummary(bmr)
+
+#calcualating and visualizing ranks
+
+#function convertBMRToRankMatrix calculates ranks based on aggregated learning performance
+#of one measure, say mmce
+
+m=convertBMRToRankMatrix(bmr,mmce)
+m
+#the rank structure can be visualized as a bar chart
+
+plotBMRRanksAsBarChart(bmr,mmce)
+
+#plotBMRanksAsBarChart shows it as a heatmap
+
+plotBMRRanksAsBarChart(bmr,pos = "tile",mmce)
+
+#also plotting the summary with ranks as trafo
+
+plotBMRSummary(bmr,trafo = "rank")
+
+#comparing learners using hypothesis tests
+
+#we use the overall Friedman test and Friedman-Nemenyi post hoc test
+
+friedmanTestBMR(bmr)
+
+#since the pvalue is 0.008, we can reject the null hypothesis with the alternative hypothesis that
+#the difference between the learners is significant
+
+#we want to find where this difference lies - we use friedmanposthoctest
+
+friedmanPostHocTestBMR(bmr,p.value = 0.05)
+
+#critical differences diagram
+
+#differnces can be plotted using (test='bd') or (test='nemenyi')
+
+#nemenyi test
+
+g=generateCritDifferencesData(bmr,p.value = 0.05,test="nemenyi")
+plotCritDifferences(g)
+
+
+#Bonferroni-Dunn Test
+
+g=generateCritDifferencesData(bmr,p.value = 0.05,test='bd')
+plotCritDifferences(g)
+
+#Custom plots
+
+#creating density plots
+
+perf=getBMRPerformances(bmr,as.df = TRUE)
+
+ggplot(perf,aes(mmce,color=learner.id))+geom_density()+facet_wrap(~task.id)
