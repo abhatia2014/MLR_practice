@@ -1191,4 +1191,34 @@ parallelGetRegisteredLevels()
 
 # Visualization -----------------------------------------------------------
 
+#visualization is performed by using the 'generation' function
 
+#all generation function start with 'generate' followed by the function purpose
+#plotting functions are prefixed by 'plot'
+
+#examples
+lrn=makeLearner("classif.lda",predict.type = "prob")
+n=getTaskSize(sonar.task)
+
+mod=train(lrn,sonar.task,subset = seq(1,n,by=2))
+pred=predict(mod,sonar.task,subset = seq(2,n,by=2))
+d=generateThreshVsPerfData(pred,measures = list(fpr,fnr,mmce))
+
+class(d)
+d$data
+plotThreshVsPerf(d)
+
+#manipulating the ggplot object
+
+#changing the panel name for meam misclassification error to error rate
+
+plt=plotThreshVsPerf(d)
+head(plt$data)
+levels(plt$data$measure)
+plt$data$measure=factor(plt$data$measure,levels=c("mmce","fpr","fnr"),
+                        labels=c("Eror Rate","FP Rate","FN Rate"))
+plt
+
+#alernatively, we caould manually create plots using ggplot2
+head(d$data)
+ggplot(d$data,aes(threshold,fpr))+geom_line()
