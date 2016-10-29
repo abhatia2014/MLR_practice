@@ -59,4 +59,60 @@ getFailureModelMsg(mod)
 
 # Wrapped Learners (Wrappers) ---------------------------------------------
 
+#examples include data preprocessing, imputation, bagging, tuning, feature selection e.t.c
+
+#Example Bagging Wrapper
+#here we create a random Forest that supports weights
+# to achieve it, we combine several decision trees from the rpart packages to create our 
+#own customized random forest
+
+#first we create a weighted toy task
+
+data(iris)
+task=makeClassifTask(data=iris,target="Species",weights = as.integer(iris$Species))
+task
+
+#we use makeBaggingWrapper to create base learner and bagged learner, ntree (100 base learner)
+#and mtry (proportion of randomely selected features)
+
+#first base learner
+base.lrn=makeLearner("classif.rpart")
+
+#next bagged learner
+
+wrapped.lrn=makeBaggingWrapper(base.lrn,bw.iters = 100, bw.feats = 0.5)
+wrapped.lrn
+
+#this new wrapped.lrn can be used for training, benchmarking, resample ,e.t.c
+
+benchmark(tasks = task, learners = list(base.lrn,wrapped.lrn))
+
+#the new bagged learner we created done better than single rpart
+
+#lets tune some hyperparameters of a fused learner
+
+getParamSet(wrapped.lrn)
+
+#let's tune the parameter minsplit and bw.feats using a random search 3 fold CV
+
+ctrl=makeTuneControlRandom(maxit = 10)
+
+rdesc=makeResampleDesc("CV",iters=3)
+
+par.set=makeParamSet(
+  makeIntegerParam("minsplit",lower = 1,upper = 10),
+  makeIntegerParam("bw.feats",lower=0.25,upper = 1)
+)
+
+tuned.lrn=makeTuneWrapper(wrapped.lrn,rdesc,mmce,par.set,ctrl)
+
+tuned.lrn
+
+#calling the train method of the newly constructed learner
+
+lrn=train(tuned.lrn,task=task)
+
+
+# Data Preprocessing ------------------------------------------------------
+
 
