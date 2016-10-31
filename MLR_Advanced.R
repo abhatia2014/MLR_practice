@@ -16,6 +16,7 @@ r=resample(lrn, iris.task,rdesc,show.info = FALSE)
 
 #to suppress the output learner from all subsequent learners
 
+
 configureMlr(show.learner.output = FALSE, show.info = FALSE)
 
 r=resample("classif.multinom",iris.task,rdesc)
@@ -115,4 +116,61 @@ lrn=train(tuned.lrn,task=task)
 
 # Data Preprocessing ------------------------------------------------------
 
+#transformation of data before applying a learning algorithm
+
+#resolving inconsistencies, imputation of missing values, identifying-removing outliers,
+#discretizing numerical data or generating dummy variables, dimension reduction, feature extraction
+
+#1. capLargeValues- convert large/infinite numeric values
+#2. createDummyFeatures- generate dummy variables for factor variables
+#3. dropFeatures- remove selected features
+#4. joinClassLevels- merge existing classes into new classes
+#5. mergeSmallFactorLevels- merge infrequent levels of factor features
+#6. normalizeFeatures- standardization/ scaling
+#7. removeConstantFeatures- remove constant features
+#8. subsetTask- remove observations or features from a task
+
+#Fusing learners with preprocessing
+
+#makePreprocWrapperCaret is an interface to all preprocessing otions offered by caret's preprocess function
+
+#makePreprocWrapper permits to write own custom preprocessing methods by defining actions to be taken 
+#before preprocessing and prediction
+
+#1. preprocessing using the Caret package
+#makePreprocWrapperCaret takes the same preprocess functions as caret but their names
+#are prefixed by ppc
+
+#example for a dataframe, the preprocess call will be
+
+makePreprocWrapperCaret(learner="classif.lda",ppc.knnImpute=TRUE, ppc.pca=TRUE, ppc.pcaComp=10)
+
+#pca should be only applied when reducing dimensions
+#let's consider sonar.task
+
+sonar.task
+
+#keeping a threshold of 0.9 i.e principle componenets needed to explain a cumulative percentage of 90%
+# of the total variance are retained
+
+lrn=makePreprocWrapperCaret("classif.qda",ppc.pca=TRUE,ppc.thresh=0.9)
+lrn
+
+#training the model
+
+mod=train(lrn, sonar.task)
+mod
+getLearnerModel(mod)
+#we see that the model is trained on 22 features as determined by pca
+
+getLearnerModel(mod,more.unwrap = TRUE)
+
+#now we see the performance of qda with and without pca
+#we use stratified sampling to prevent errors in qda
+
+rin=makeResampleInstance("CV",iters=3,stratify=TRUE,task=sonar.task)
+res=benchmark(list("classif.qda",lrn),sonar.task,rin)
+res
+# preprocessing has turned out to be really beneficial by reducing the mmce 
+# from 39% to 23%
 
