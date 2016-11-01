@@ -172,5 +172,27 @@ rin=makeResampleInstance("CV",iters=3,stratify=TRUE,task=sonar.task)
 res=benchmark(list("classif.qda",lrn),sonar.task,rin)
 res
 # preprocessing has turned out to be really beneficial by reducing the mmce 
-# from 39% to 23%
+# from 41% to 24%
 
+#joint tuning of preprocessing options and learner parameters
+
+#the preprocessing and learner parameters can be tuned jointly
+
+#let's first get an overview of all parameters using the function getParamSet
+
+getParamSet(lrn)
+
+#let's tune the number of principal components (ppc.pcaComp)
+
+#we perform a grid search and set the resolution to 10
+
+ps=makeParamSet(
+  makeIntegerParam("ppc.pcaComp",lower=1, upper= getTaskNFeats(sonar.task)),
+  makeDiscreteParam("predict.method",values=c("plug-in",'debiased'))
+)
+
+ctrl=makeTuneControlGrid(resolution=10)
+
+res=tuneParams(lrn,sonar.task,rin,par.set = ps,control = ctrl)
+res
+as.data.frame(res$opt.path)[1:3]
