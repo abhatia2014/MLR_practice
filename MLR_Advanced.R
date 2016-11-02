@@ -142,7 +142,7 @@ lrn=train(tuned.lrn,task=task)
 #are prefixed by ppc
 
 #example for a dataframe, the preprocess call will be
-
+?makePreprocWrapperCaret
 makePreprocWrapperCaret(learner="classif.lda",ppc.knnImpute=TRUE, ppc.pca=TRUE, ppc.pcaComp=10)
 
 #pca should be only applied when reducing dimensions
@@ -196,3 +196,6 @@ ctrl=makeTuneControlGrid(resolution=10)
 res=tuneParams(lrn,sonar.task,rin,par.set = ps,control = ctrl)
 res
 as.data.frame(res$opt.path)[1:3]
+summarizeColumns(mtcars)
+
+summarizeColumns(iris)
