@@ -82,7 +82,9 @@ summary(imp_test)
 
 summary(imp_train$ApplicantIncome)
 summary(imp_train$LoanAmount)
-
+names(imp_test)
+names(imp_train)
+imp_train$Gender.dummy=NULL
 #here we'll cap the large values and set them to a threshold value as shown below
 
 cd=capLargeValues(imp_train,target="Loan_Status",cols = c("ApplicantIncome"),threshold = 40000)
@@ -121,7 +123,7 @@ cd_train1=cd_train%>%
 
 str(cd_train1) 
 
-cd_train=cd_train[,-c(13:19)]
+cd_train=cd_train[,-c(13:18)]
 #colbind the two datasets
 cd_train=cbind(cd_train,cd_train1)
 rm(cd_train1)
@@ -185,24 +187,24 @@ highcorr=findCorrelation(xscorr,cutoff = 0.75)
 highcorr
 names(xs)
 #we'll remove the column with the high correlation respresented by highcorr
-
+library(mlr)
 #Machine Learning Tasks
 
 #1. create a task
-
+cd_train$Married.dummy=NULL
+names(cd_test)
+cd_test=cd_test[,-c(12,13)]
 traintask=makeClassifTask(data = cd_train,target = "Loan_Status")
-#add a dummy variable to cd_test
-cd_test$Loan_Status=sample(0:1,size=367,replace = T)
+
 #remove the extra dummy variable- Gender.dummy
-cd_test=cd_test[,-13]
+cd_test$Loan_Status=1
+cd_test$Loan_Status=as.factor(cd_test$Loan_Status)
 testtask=makeClassifTask(data=cd_test,target = "Loan_Status")
 
 traintask
 
 #change the positive class from N to Y
 
-traintask=makeClassifTask(data=cd_train,target = 'Loan_Status',positive = "Y")
-traintask
 
 #for a deeper view of the traintask , 
 str(getTaskData(traintask))
@@ -212,9 +214,7 @@ str(getTaskData(traintask))
 traintask=normalizeFeatures(traintask,method = "standardize")
 testtask=normalizeFeatures(testtask,method="standardize")
 
-#we drop features that are not needed- married dummy
 
-traintask=dropFeatures(traintask,features = c("Married.dummy"))
 
 #Let's see which variables are important
 
@@ -225,4 +225,124 @@ traintask=dropFeatures(traintask,features = c("Married.dummy"))
 
 
 im_features=generateFilterValuesData(traintask,method = c("information.gain","chi.squared"))
+
+#some problems with FSelector installation
+
+#Let's train the machine first using the Quadratic Discriminant Analysis (QDA)
+
+#make learner
+
+qda.learner=makeLearner("classif.qda",predict.type = "response")
+
+names(qda.learner)
+qda.learner
+
+#train model
+
+qmodel=train(qda.learner,traintask)
+qmodel
+
+#predict on test data
+str(cd_train)
+str(cd_test)
+cd_test$Loan_Status=NULL
+qpredict=predict(qmodel,traintask)
+calculateConfusionMatrix(qpredict)
+
+names(cd_test)
+names(cd_train)
+
+#2. Lets try a decision tree model
+
+#we'll hpyer tune the parameters to obtain better results
+
+#let's find the hyperparameters suitable for rpart
+
+getParamSet("classif.rpart")
+
+#first make a tree learner
+
+maketree=makeLearner("classif.rpart",predict.type = "response")
+
+#set 3 fold Cross Validation
+
+set_cv=makeResampleDesc("CV",iters=3)
+
+#search for hyper parameters
+
+gs=makeParamSet(
+  makeIntegerParam("minsplit",lower=10,upper=50),
+  makeIntegerParam("minbucket",lower=5,upper=50)
+  
+)
+
+#set up an optimization search algorithm
+
+gscontrol=makeTuneControlRandom(maxit = 200)
+
+#hpertune the parameters to select the best hyperparameters
+
+stune=tuneParams(learner = maketree,resampling = set_cv,task=traintask,
+                 par.set = gs,control = gscontrol,measures = list(mmce,acc))
+
+stune$control
+stune$y # gives the cross validation results
+#82.4 % accuracy
+
+#using setHyperParms we can automatically set the best parameter
+
+t.tree=setHyperPars(maketree,par.vals = stune$x)
+
+#now train the model
+
+t.rpart=train(t.tree,traintask)
+
+getLearnerModel(t.rpart)
+
+#make predictions
+
+tpmodel=predict(t.rpart,traintask)
+calculateConfusionMatrix(pred = tpmodel)
+head(tpmodel$data)
+table(tpmodel$data)
+
+#lets now try a support vector machine to do the predictions
+
+#load SVM
+
+getParamSet("classif.svm")
+
+#make learner
+
+ksvm_learn=makeLearner("classif.ksvm",predict.type = "response")
+
+#create the search space
+
+psvm=makeParamSet(
+  makeDiscreteParam("C",values=2^c(-8,-4,-2,0,2)),#cost parameters
+  makeDiscreteParam("sigma",values=2^c(-8,-4,0,4)) #RBF Kernel
+)
+
+#specify search algorithm
+
+ctrl=makeTuneControlGrid()
+
+#tune model
+
+res=tuneParams(learner = ksvm_learn,task=traintask,resampling = set_cv,
+               par.set = psvm,control = ctrl,measures = list(mmce,acc))
+res
+
+#set the model with best params
+
+t.svm=setHyperPars(learner = ksvm_learn,par.vals = res$x)
+
+#train the model
+
+train.svm=train(t.svm,traintask)
+
+#test on validation set
+
+predict.svm=predict(train.svm,traintask)
+calculateConfusionMatrix(predict.svm)
 
