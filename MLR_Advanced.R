@@ -199,3 +199,32 @@ as.data.frame(res$opt.path)[1:3]
 summarizeColumns(mtcars)
 
 summarizeColumns(iris)
+
+
+# Imputation of Missing Values --------------------------------------------
+
+
+#can impute by a fixed constant- mean , median or mode
+
+#some algorithms can deal with missing values - obtained by list learners with properties- missing
+
+listLearners("regr",properties = "missings")[c("class","package")]
+
+#lets look at the airquality dataset
+data("airquality")
+
+summary(airquality)
+
+#we'll insert some artificial NA in column wind and coerce it into a factor
+
+airq=airquality
+ind=sample(nrow(airq),10)
+
+ind
+airq$Wind[ind]=NA
+
+airq$Wind=cut(airq$Wind,c(0,8,16,24))
+summary(airq)
+#we can impute Ozone and Solar.R missing values by mean and Wind missing values
+#by mode
+str(airq)
