@@ -303,3 +303,64 @@ r=resample(learner = lrn,resampling = rdesc,task = task,models = TRUE)
 r$aggr
 r$models
 lapply(r$models,getLearnerModel,more.unwrap=TRUE)
+
+
+# Generic Bagging ---------------------------------------------------------
+
+#bag any mlr learner using makeBaggingWrapper
+
+#bw.iters- how many samples do we want to train our learner on
+#bw.replace- sample with replacement
+#bw.size- percentage of samples
+#bw.feats- percentage size of randomely selected features for each iteration
+
+#first let's setup a learner to pass the makeBaggingWrapper
+
+lrn=makeLearner("classif.rpart")
+
+baglrn=makeBaggingWrapper(learner = lrn,bw.iters = 50, bw.replace = TRUE,bw.size = 0.8,bw.feats = 0.75)
+
+#now let's compare performance with and without bagging
+
+rdesc=makeResampleDesc("CV",iters=10)
+
+r=resample(learner = baglrn,task = sonar.task,resampling = rdesc)
+r$aggr
+#test.mean for mmce is 19.09%
+
+# now resampling without bagging
+
+normallrn=resample(learner = lrn,task = sonar.task,resampling = rdesc)
+normallrn$aggr
+#mean mmce is 27.88%
+#thus there is an improvement of ~8% with bagging
+
+#changing the type of prediction
+
+baglrn=setPredictType(baglrn,predict.type = "prob")
+
+n=getTaskSize(bh.task)
+train.inds=sample(n,size = 0.65*n,replace = FALSE)
+test.inds=setdiff(1:n,train.inds)
+
+lrn=makeLearner("regr.rpart")
+baglrn=makeBaggingWrapper(lrn)
+baglrn=setPredictType(baglrn,predict.type = "se")
+mod=train(learner = baglrn,task = bh.task,subset = train.inds)
+#get the model
+head(getLearnerModel(mod))
+
+#predict the response and calculate the standard deviation
+
+pred=predict(mod,task=bh.task,subset = test.inds)
+
+head(as.data.frame(pred))
+
+#we'll visualize it using ggplot2
+
+library(ggplot2)
+library(reshape2)
+
+data=cbind(as.data.frame(pred),getTaskData(bh.task,subset = test.inds))
+g=ggplot(data,aes(x=lstat,y=response,ymin=response-se,ymax=response+se,col=age))
+g+geom_point()+geom_linerange(alpha=0.5)
