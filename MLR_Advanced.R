@@ -226,5 +226,80 @@ airq$Wind[ind]=NA
 airq$Wind=cut(airq$Wind,c(0,8,16,24))
 summary(airq)
 #we can impute Ozone and Solar.R missing values by mean and Wind missing values
-#by mode
+#by mode and put dummy variables for the features that have missing values
+
 str(airq)
+
+imp=impute(airq,classes = list(integer=imputeMean(),factor=imputeMode()),
+           dummy.classes = "integer")
+head(imp$data)
+
+imp$desc
+summary(imp$data)
+
+#let's look at another example involving a target variable
+#here we will predict the ozone levels, first remove day and month variable
+names(airq)
+airq=airq[,c(1:4)]
+
+#use first 100 as training and remaining as test set
+
+airq.train=airq[1:100,]
+airq.test=airq[-c(1:100),]
+
+#for supervised learning, we need to pass the name of the target variable to impute
+#prevents creation of a dummy variable for the target variables
+
+#here we'll specify imputation method for each variable
+
+#missing values for Solar.R are imputed by random numbers drawn from the empirical distribution
+#of non missing numbers
+
+#imputelearner allows us to use supervised learning algorithm integrated into mlr for imputation
+
+#missing values in wind are replaced by predictions of a classification tree (rpart)
+
+#rpart can deal with missing values therefore NA in solar.R do not pose a problem
+
+imp=impute(airq.train,target = "Ozone",cols = list(Solar.R=imputeHist(),
+                                                   Wind=imputeLearner("classif.rpart")),
+           dummy.cols = c("Solar.R","Wind"))
+summary(imp$data)
+imp$desc
+
+#the impdesc object can be used to reimpute the test data in the same way as the training data
+
+airq.test.imp=reimpute(airq.test,imp$desc)
+head(airq.test.imp)
+
+#evaluating a machine learning method by resampling technique, the impute/reimpute
+# may be called automatically each time before training/prediction- using an imputation wrapper
+
+#example
+
+lrn=makeImputeWrapper("regr.lm",cols = list(Solar.R=imputeHist(),
+                                            Wind=imputeLearner("classif.rpart")),
+                      dummy.cols = c('Solar.R','Wind'))
+lrn
+
+#imputelearner (lrn) is applied on the training set before the training
+#then reimpute is applied on the test set and then predictions are done
+
+#in this example, first we delete the missing values in the target variable
+#before assigning the task
+
+airq=airq[!is.na(airq$Ozone),]
+
+#now create a task
+task=makeRegrTask(data=airq,target = 'Ozone')
+
+#create the resampling distribution
+
+rdesc=makeResampleDesc("CV",iters=3)
+
+#perform the resample
+
+r=resample(learner = lrn,resampling = rdesc,task = task,models = TRUE)
+r$aggr
+r$models
+lapply(r$models,getLearnerModel,more.unwrap=TRUE)
