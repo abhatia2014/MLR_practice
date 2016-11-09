@@ -325,14 +325,14 @@ train("classif.rpart",task = classiftask,weights = wt)
 
 #use the boston housing and fit a GBM model
 
-n=getTaskSize(regr.task)
+n=getTaskSize(bh.task)
 n
 train.set=seq(1,n,by=2)
 test.set=seq(2,n,by=2)
 
 lrn=makeLearner("regr.gbm",n.trees=100)
-regmod=train(lrn,regr.task,subset = train.set)
-task.pred=predict(regmod,task=regr.task,subset = test.set)
+regmod=train(lrn,bh.task,subset = train.set)
+task.pred=predict(regmod,task=bh.task,subset = test.set)
 task.pred
 names(task.pred)
 task.pred$task.desc
@@ -386,17 +386,22 @@ pred=predict(mod,newdata = iris)
 head(as.data.frame(pred))
 pred
 pred$data
+#using a confusion matrix
 
-conf.matrix=getConfMatrix(pred,relative=FALSE)
+calculateConfusionMatrix(pred)
 
-head(getPredictionProbabilities(pred))
+#get relative frequencies additional to the absolute numbers
 
-#a confusion matrix can be obtained by the function calculateconfusionmatrix
+conf.matrix=calculateConfusionMatrix(pred,relative=TRUE)
+conf.matrix
 
+conf.matrix$relative.row
 
-confusionMatrix(pred$data$response,pred$data$Species)
+#we can also add the absolute number of observations for each predicted and true class
+#label to the matrix
 
-#generating confusion matrix in mlr
+calculateConfusionMatrix(pred,relative = TRUE,sums = TRUE)
+
 
 #adjusting the threshold
 
@@ -498,6 +503,7 @@ performance(pred)
 
 performance(pred,measures = medse)
 
+#we can also get multiple performance measures at once
 performance(pred, measures=list(mse, medse,mae))
 
 #for some performance measures like time to train, we have to pass the task or fitted model
@@ -528,7 +534,7 @@ str(auc)
 #Binary classification
 
 #we consider the sonar dataset
-?sonar.task
+
 data("sonar.task")
 sonar.task
 lrn=makeLearner("classif.lda",predict.type = "prob")
@@ -542,7 +548,9 @@ performance(pred,measures = list(fpr,fnr,mmce))
 
 #lets plot the false positive and negative rate against the threshold
 
-d=generateThreshVsPerfData(pred,measures = list(fpr,fnr,mmce))
+d=generateThreshVsPerfData(pred,measures = list(fpr,tpr,mmce))
+plotROCCurves(d)
+performance(pred,auc)
 plotThreshVsPerf(d)
 
 #lets plot using ggvis package
@@ -552,8 +560,8 @@ plotThreshVsPerfGGVIS(d)
 #calculating performance using ROC measures
 #function calculateROCMeasures
 
-calculateROCMeasures(pred)
-calculateConfusionMatrix(pred)
+r=calculateROCMeasures(pred)
+print(r,abbreviations = FALSE)
 
 
 # Resampling --------------------------------------------------------------

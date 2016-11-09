@@ -383,4 +383,78 @@ fv=generateFilterValuesData(iris.task,method = "information.gain")
 
 # ROC Analysis and Performance Curves -------------------------------------
 
+#ROC curves and other performance plots serve to visualizes the relationship between one or two 
+#performance measures and the threshold
 
+#mlr offers three ways to plot ROC and other performance curves
+
+#plotROCCurves
+#asROCRPrediction
+#plotViperCharts
+
+#list the learners that are capable of predicting probabilities
+
+listLearners("classif",properties = c("twoclass","prob"))[c("class","package")]
+
+#performance plots with ROC Curves
+
+#example 1- single predictions using lda
+
+n=getTaskSize(sonar.task)
+train.set=sample(n,round(2/3*n))
+test.set=setdiff(1:n,train.set)
+
+#make learner
+
+lrn1=makeLearner("classif.lda",predict.type = "prob")
+
+#training the learner and creating the model
+
+mod1=train(lrn1,sonar.task,subset = train.set)
+
+#predicting using the model
+
+pred1=predict(mod1,task=sonar.task,subset = test.set)
+
+pred1
+calculateConfusionMatrix(pred1)
+
+#for plotting the ROC curves ,we plot the false and true positive rate 
+
+df=generateThreshVsPerfData(pred1,measures=list(fpr,tpr,mmce))
+
+df$data
+plotROCCurves(df)
+
+#corresponding auc can be calculated by calling performance function
+
+performance(pred1,auc)
+#performance of 76.85%
+
+#to plot performance vs threshold
+
+plotThreshVsPerf(df)
+
+#let's try another learner - SVM with RBF kernel called ksvm
+
+lrn2=makeLearner("classif.ksvm",predict.type = "prob")
+
+mod2=train(lrn2,task = sonar.task,subset = train.set)
+
+pred2=predict(mod2,task = sonar.task,subset = test.set)
+
+#comparing the performance of the two learner by displaying them in one plot
+
+df=generateThreshVsPerfData(list(lda=pred1,ksvm=pred2),measures = list(fpr,tpr, mmce))
+
+plotROCCurves(df)
+
+performance(pred2,auc)
+calculateConfusionMatrix(pred2)
+#KSVM has a much higher auc (95.18%) than lda
+
+#superimposing the curves of the two learners
+
+head(df$data)
+library(ggplot2)
+ggplot(df$data,aes(fpr,tpr,color=learner,group=learner))+geom_path()
