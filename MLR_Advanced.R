@@ -1,4 +1,5 @@
-
+library(rJava)
+library(coreNLP)
 library(mlr)
 
 
@@ -364,3 +365,22 @@ library(reshape2)
 data=cbind(as.data.frame(pred),getTaskData(bh.task,subset = test.inds))
 g=ggplot(data,aes(x=lstat,y=response,ymin=response-se,ymax=response+se,col=age))
 g+geom_point()+geom_linerange(alpha=0.5)
+
+
+
+# Feature Selection -------------------------------------------------------
+
+#MLR supports filter and wrapper methods for performing feature selection
+
+#generateFilterValuesData is the method to get feature importance and built into the mlr's function
+
+#involves a task and character string specifying the method
+library(RWeka)
+fv=generateFilterValuesData(iris.task,method = "information.gain")
+##*******rJava not working- will complete this section later*************##
+
+
+
+# ROC Analysis and Performance Curves -------------------------------------
+
+
