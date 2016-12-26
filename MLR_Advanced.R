@@ -1,4 +1,4 @@
-#establishing link with github
+#establishing link with githubs
 library(rJava)
 library(coreNLP)
 library(mlr)
