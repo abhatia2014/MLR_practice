@@ -12,6 +12,7 @@ head(iris)
 #1. define the task
 
 task=makeClassifTask(id="tutorial",data=iris,target = "Species")
+task$task.desc
 
 #2. Define the learner
 
@@ -21,7 +22,7 @@ lrn=makeLearner("classif.lda")
 
 rdesc=makeResampleDesc(method="CV",stratify = TRUE)
 
-
+?makeResampleDesc
 
 #4. Do the resampling
 
@@ -54,7 +55,6 @@ head(BostonHousing)
 regr.task=makeRegrTask(id="bh",data=BostonHousing,target = "medv")
 regr.task
 
-
 # Classification Machine Learning Task ------------------------------------
 
 data(BreastCancer,package = "mlbench")
@@ -64,6 +64,7 @@ df=BreastCancer
 str(df)
 df$Id=NULL
 classiftask=makeClassifTask(id="bc",data=df,target = "Class")
+classiftask$task.desc
 #in the makeClassifTask - the positive class can be set by positive="malignant"
 
 classiftask
@@ -80,6 +81,7 @@ head(lung)
 lung$status=(lung$status==2)#converts to logical
 
 surv.task=makeSurvTask(id="ls",data = lung,target = c("time","status"))
+?makeSurvTask
 surv.task
 
 
@@ -104,7 +106,7 @@ data("mtcars",package='datasets')
 head(mtcars)
 clustertask=makeClusterTask(data=mtcars)
 clustertask
-
+clustertask$task.desc
 
 # Cost Sensitive Classification Task --------------------------------------
 
@@ -113,7 +115,7 @@ df=tbl_df(df)
 df
 iris=tbl_df(iris)
 iris
-?runif
+
 cost = matrix(runif(150 * 3, 0, 2000), 150) * (1 - diag(3))[iris$Species,]
 cost.sens.taks=makeCostSensTask(id="costsens",data=iris,cost=cost)
 cost.sens.taks
@@ -137,20 +139,41 @@ getTaskFeatureNames(clustertask)
 
 #removing features with zero variance (constant features)
 
+# New Function- remove features with zero variance ------------------------
+
+#add a constant feature to Breast Cancer task sampled at 5 places 
+t=sample(nrow(df2),2,replace = FALSE)
+BreastCancer$const=1
+df2=BreastCancer
+df2$const[t]=5
+
+
+df2$Id=NULL
+classiftask2=makeClassifTask(data = df2,target = "Class")
 removeConstantFeatures(clustertask)
-
-removeConstantFeatures(classiftask)
-
+?removeConstantFeatures
+classiftask2
+removeConstantFeatures(classiftask2,perc = 0.05)
+#removes a constant column const only when there is a percentage specified , like in the
+#above case- any feature where less than 0.05 observations differ from the mode - 
+#will be deleted
 #remove selected features
 #first get names
 getTaskFeatureNames(surv.task)
 
+# New Function-Can be used to drop selective features from the task --------------------
+
+
 dropFeatures(surv.task,c("meal.cal","wt.loss"))
 
-#standardize numerical features
+
+# New Function- normalizeFeatures -----------------------------------------
+
+# for normalizing- center, scale, standardize, range
 ?normalizeFeatures
 
 task=normalizeFeatures(clustertask,method = "range")
+#to get a summary of the task data that has been normalized
 summary(getTaskData(task))
 
 
@@ -168,7 +191,8 @@ regr.lrn=makeLearner("regr.gbm",par.vals = list(n.trees=500,interaction.depth=3)
 regr.lrn
 
 #another example- K Means with 5 clusters
-
+library(rgl)
+library(clusterSim)
 cluster.lrn=makeLearner("cluster.kmeans",centers=5)
 
 #the naming convention for the make learner method is 
@@ -181,13 +205,14 @@ cluster.lrn=makeLearner("cluster.kmeans",centers=5)
 #accessing a learner
 
 names(classif.learn)
-
+classif.learn$par.set
 #get the complete set of hyperparameters for classif.learn
 
 classif.learn$par.set
+
 #this gives the configured parameters
 classif.learn$par.vals
-cluster.lrn$par.vals
+
 regr.lrn$par.set
 regr.lrn$par.vals
 
@@ -239,6 +264,8 @@ lrn1=makeLearner("classif.lda")
 mod1=train(lrn1,task1)
 
 mod1
+mod1$learner.model
+mod1$features
 
 #alternatively, could also use
 mod1 = train("classif.lda", task1)
@@ -255,6 +282,9 @@ head(ruspini)
 plot(y~x,ruspini)
 
 #generate task
+
+# To Start from here >>> --------------------------------------------------
+
 
 task.cluster=makeClusterTask(data=ruspini)
 
@@ -827,7 +857,7 @@ ctrl=makeTuneControlRandom(maxit = 100)
 #tune parameters
 
 res=tuneParams("classif.ksvm",task=iris.task,resampling = rdesc, par.set = num_ps,
-              control = ctrl,measures = list(acc,setAggregation(acc,test.sd)))
+               control = ctrl,measures = list(acc,setAggregation(acc,test.sd)))
 res
 
 #accessing the tuning results
