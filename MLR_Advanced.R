@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 #establishing link with github again
+=======
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 library(rJava)
 library(coreNLP)
 library(mlr)
@@ -15,7 +18,11 @@ r=resample("classif.multinom",iris.task,rdesc)
 
 lrn=makeLearner("classif.multinom",config = list(show.learner.output=FALSE))
 r=resample(lrn, iris.task,rdesc,show.info = FALSE)
+<<<<<<< HEAD
 r
+=======
+
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 #to suppress the output learner from all subsequent learners
 
 
@@ -72,7 +79,10 @@ getFailureModelMsg(mod)
 #first we create a weighted toy task
 
 data(iris)
+<<<<<<< HEAD
 
+=======
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 task=makeClassifTask(data=iris,target="Species",weights = as.integer(iris$Species))
 task
 
@@ -84,8 +94,11 @@ base.lrn=makeLearner("classif.rpart")
 
 #next bagged learner
 
+<<<<<<< HEAD
 # New Function- makeBaggingWrapper ----------------------------------------
 #converting a base learner to a bagged learner
+=======
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 wrapped.lrn=makeBaggingWrapper(base.lrn,bw.iters = 100, bw.feats = 0.5)
 wrapped.lrn
 
@@ -116,7 +129,11 @@ tuned.lrn
 
 #calling the train method of the newly constructed learner
 
+<<<<<<< HEAD
 lrn=mlr::train(tuned.lrn,task=task)
+=======
+lrn=train(tuned.lrn,task=task)
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 
 
 # Data Preprocessing ------------------------------------------------------
@@ -134,9 +151,15 @@ lrn=mlr::train(tuned.lrn,task=task)
 #6. normalizeFeatures- standardization/ scaling
 #7. removeConstantFeatures- remove constant features
 #8. subsetTask- remove observations or features from a task
+<<<<<<< HEAD
 ?removeConstantFeatures
 #Fusing learners with preprocessing
 ?makePreprocWrapperCaret
+=======
+
+#Fusing learners with preprocessing
+
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 #makePreprocWrapperCaret is an interface to all preprocessing otions offered by caret's preprocess function
 
 #makePreprocWrapper permits to write own custom preprocessing methods by defining actions to be taken 
@@ -163,7 +186,11 @@ lrn
 
 #training the model
 
+<<<<<<< HEAD
 mod=mlr::train(lrn, sonar.task)
+=======
+mod=train(lrn, sonar.task)
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 mod
 getLearnerModel(mod)
 #we see that the model is trained on 22 features as determined by pca
@@ -174,7 +201,11 @@ getLearnerModel(mod,more.unwrap = TRUE)
 #we use stratified sampling to prevent errors in qda
 
 rin=makeResampleInstance("CV",iters=3,stratify=TRUE,task=sonar.task)
+<<<<<<< HEAD
 res=benchmark(list("classif.qda",lrn),sonar.task,rin,measures = acc)
+=======
+res=benchmark(list("classif.qda",lrn),sonar.task,rin)
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 res
 # preprocessing has turned out to be really beneficial by reducing the mmce 
 # from 41% to 24%
@@ -199,7 +230,11 @@ ps=makeParamSet(
 ctrl=makeTuneControlGrid(resolution=10)
 
 res=tuneParams(lrn,sonar.task,rin,par.set = ps,control = ctrl)
+<<<<<<< HEAD
 res$y
+=======
+res
+>>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
 as.data.frame(res$opt.path)[1:3]
 summarizeColumns(mtcars)
 
