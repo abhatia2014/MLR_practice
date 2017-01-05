@@ -46,9 +46,9 @@ test$Loan_ID=NULL
 #in this case we'll use basic mean and mode imputations to impute missing data
 ?impute
 imp=impute(train,classes = list(factor=imputeMode(),integer=imputeMean()),dummy.classes = c("integer","factor"),
-          dummy.type = "numeric")
-imp1=impute(test,classes = list(factor=imputeMode(),integer=imputeMean()),dummy.classes = c("integer","factor"),
            dummy.type = "numeric")
+imp1=impute(test,classes = list(factor=imputeMode(),integer=imputeMean()),dummy.classes = c("integer","factor"),
+            dummy.type = "numeric")
 
 imp_train=imp$data
 imp_test=imp1$data
@@ -69,10 +69,10 @@ rpart_imp=impute(train,target="Loan_Status",
                  dummy.classes = c("numeric","factor"),
                  dummy.type = "numeric")
 rpart_train_imp=rpart_imp$data
+summarizeColumns(rpart_train_imp)
 summary(rpart_train_imp)
 summary(imp_test)
 
-#not a good method since there are still some NAs remaining after doing the rpart imputation
 
 #feature Engineering
 
@@ -82,11 +82,12 @@ summary(imp_test)
 
 summary(imp_train$ApplicantIncome)
 summary(imp_train$LoanAmount)
+boxplot(imp_train$ApplicantIncome)
 names(imp_test)
 names(imp_train)
 imp_train$Gender.dummy=NULL
 #here we'll cap the large values and set them to a threshold value as shown below
-
+#new function- capLargeValues
 cd=capLargeValues(imp_train,target="Loan_Status",cols = c("ApplicantIncome"),threshold = 40000)
 summary(cd$ApplicantIncome)
 cd=capLargeValues(cd,target = "Loan_Status",cols = c("CoapplicantIncome"), threshold=21000)
@@ -165,7 +166,7 @@ cd_test$Loan_amount_by_term=cd_test$LoanAmount/cd_test$Loan_Amount_Term
 library(caret)
 
 #first split the data based on class
-
+?split
 az=split(names(cd_train),sapply(cd_train,function(x) {class(x)}))
 az$factor
 az$numeric
@@ -191,26 +192,46 @@ library(mlr)
 #Machine Learning Tasks
 
 #1. create a task
-cd_train$Married.dummy=NULL
+#remove all dummy variables
+names(cd_train)
+cd_train=cd_train%>%
+  select(-contains("dummy"))
+
 names(cd_test)
-cd_test=cd_test[,-c(12,13)]
+cd_test=cd_test[,-13]
+#remove all dummy variables
+cd_test=cd_test%>%
+  select(-contains("dummy"))
+
+str(cd_train)
+# convert the factor loan status to numerical
+
+cd_train$Loan_Status=as.numeric(cd_train$Loan_Status)
+table(cd_train$Loan_Status)
+cd_train$Loan_Status=factor(cd_train$Loan_Status)
+names(cd_train)
+head(cd_train,2)
 traintask=makeClassifTask(data = cd_train,target = "Loan_Status")
 
 #remove the extra dummy variable- Gender.dummy
-cd_test$Loan_Status=1
+
+
 cd_test$Loan_Status=as.factor(cd_test$Loan_Status)
 testtask=makeClassifTask(data=cd_test,target = "Loan_Status")
 
 traintask
-
+testtask
 #change the positive class from N to Y
 
 
 #for a deeper view of the traintask , 
+traintask
 str(getTaskData(traintask))
 
 #Now we'll normalize the features using normalizeFeatures function- only numeric variables are normalized
 
+# New Function- normalizeFeatures -----------------------------------------
+?normalizeFeatures
 traintask=normalizeFeatures(traintask,method = "standardize")
 testtask=normalizeFeatures(testtask,method="standardize")
 
@@ -221,6 +242,9 @@ testtask=normalizeFeatures(testtask,method="standardize")
 #mlr has a built in function for feature importance
 
 #install FSelector package
+
+
+# New Function- generateFilterValuesData ----------------------------------
 
 
 
@@ -245,12 +269,16 @@ qmodel
 #predict on test data
 str(cd_train)
 str(cd_test)
-cd_test$Loan_Status=NULL
+
 qpredict=predict(qmodel,traintask)
 calculateConfusionMatrix(qpredict)
 
 names(cd_test)
 names(cd_train)
+
+
+# Hyperparameter Tuning for Predictive Analytics --------------------------
+
 
 #2. Lets try a decision tree model
 
@@ -272,10 +300,13 @@ set_cv=makeResampleDesc("CV",iters=3)
 
 gs=makeParamSet(
   makeIntegerParam("minsplit",lower=10,upper=50),
-  makeIntegerParam("minbucket",lower=5,upper=50)
+  makeIntegerParam("minbucket",lower=5,upper=50),
+  makeNumericParam("cp",lower=0.01,upper=0.60),
+  makeIntegerParam("maxdepth",lower=15,upper=30)
   
 )
 
+gs
 #set up an optimization search algorithm
 
 gscontrol=makeTuneControlRandom(maxit = 200)
@@ -288,7 +319,7 @@ stune=tuneParams(learner = maketree,resampling = set_cv,task=traintask,
 stune$control
 stune$y # gives the cross validation results
 #82.4 % accuracy
-
+stune$x
 #using setHyperParms we can automatically set the best parameter
 
 t.tree=setHyperPars(maketree,par.vals = stune$x)
@@ -310,7 +341,7 @@ table(tpmodel$data)
 
 #load SVM
 
-getParamSet("classif.svm")
+getParamSet("classif.ksvm")
 
 #make learner
 
@@ -331,11 +362,12 @@ ctrl=makeTuneControlGrid()
 
 res=tuneParams(learner = ksvm_learn,task=traintask,resampling = set_cv,
                par.set = psvm,control = ctrl,measures = list(mmce,acc))
-res
+res$control
 
 #set the model with best params
 
 t.svm=setHyperPars(learner = ksvm_learn,par.vals = res$x)
+
 
 #train the model
 
