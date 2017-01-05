@@ -1,7 +1,7 @@
-<<<<<<< HEAD
+
 #establishing link with github again
-=======
->>>>>>> f36fdb8417cb00b806083a840164e462e7a192cc
+
+
 library(rJava)
 library(coreNLP)
 library(mlr)
