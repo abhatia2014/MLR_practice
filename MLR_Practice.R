@@ -12,6 +12,7 @@ head(iris)
 #1. define the task
 
 task=makeClassifTask(id="tutorial",data=iris,target = "Species")
+task
 task$task.desc
 
 #2. Define the learner
@@ -25,9 +26,12 @@ rdesc=makeResampleDesc(method="CV",stratify = TRUE)
 ?makeResampleDesc
 
 #4. Do the resampling
-
+getDefaultMeasure(task)
 r=resample(learner = lrn, task = task, resampling = rdesc, show.info = TRUE)
-
+r
+names(r)
+r$measures.test
+r$aggr
 #5. get the mean misclassfication error
 
 names(r)
