@@ -146,10 +146,10 @@ getTaskFeatureNames(clustertask)
 # New Function- remove features with zero variance ------------------------
 
 #add a constant feature to Breast Cancer task sampled at 5 places 
-t=sample(nrow(df2),2,replace = FALSE)
+
 BreastCancer$const=1
 df2=BreastCancer
-df2$const[t]=5
+
 
 
 df2$Id=NULL
@@ -178,6 +178,7 @@ dropFeatures(surv.task,c("meal.cal","wt.loss"))
 
 task=normalizeFeatures(clustertask,method = "range")
 #to get a summary of the task data that has been normalized
+getTaskData(task)
 summary(getTaskData(task))
 
 
@@ -189,6 +190,8 @@ summary(getTaskData(task))
 ?makeLearner
 classif.learn=makeLearner('classif.randomForest',predict.type = "prob",fix.factors.prediction = TRUE)
 classif.learn
+names(classif.learn)
+classif.learn$par.set
 #another example regression GBM and specify hyper parameters
 
 regr.lrn=makeLearner("regr.gbm",par.vals = list(n.trees=500,interaction.depth=3))
@@ -243,6 +246,7 @@ lrns=listLearners()
 #list classifiers that can output probabilities
 
 lrns2=listLearners("classif",properties = "prob")
+
 lrns2
 #list learners that can be applied to iris (ie. multiclass) and output probabilities
 
@@ -299,9 +303,11 @@ clus.lrn=makeLearner("cluster.kmeans",centers=4)
 #train the learnere
 
 clus.trn=train(clus.lrn,task.cluster)
+clus.trn$learner.model
 getLearnerModel(clus.trn)
 clus.trn
 names(clus.trn)
+clus.trn$factor.levels
 clus.trn$learner
 
 clus.trn$time
@@ -371,7 +377,9 @@ task.pred
 names(task.pred)
 task.pred$task.desc
 task.pred$data
-
+plot(task.pred$data$truth,task.pred$data$response)
+library(ggplot2)
+ggplot(task.pred$data,aes(truth,response))+geom_point()+geom_smooth(method = "lm")
 #for unsupervised machine learning problems
 
 #we cluster the IRIS dataset w/o the target variable
@@ -383,7 +391,7 @@ task=makeClusterTask(data=iris.train)
 mod=train("cluster.kmeans",task)
 newdata.pred=predict(mod,newdata = iris.test)
 newdata.pred
-
+plot(newdata.pred$data$response)
 #assessing the prediction
 
 head(as.data.frame(task.pred))
@@ -395,7 +403,7 @@ head(getPredictionTruth(task.pred))
 
 head(getPredictionResponse(task.pred))
 
-#to get probabilities, use the function- getpredictionprobabilities
+#to get probabilities, use the function- getpredictionprobabilities for classif tasks
 
 #using fuzzy cmeans clustering
 
